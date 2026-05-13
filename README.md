@@ -21,7 +21,7 @@ The easiest way to build Caddy with this plugin is using `xcaddy`:
 
 ```bash
 xcaddy build \
-    --with git.zed.ink:8443/mingwiki/caddy-auth-oidc
+    --with github.com/mingwiki/caddy-auth-oidc
 ```
 
 ### Docker Build Example
@@ -30,7 +30,7 @@ xcaddy build \
 FROM caddy:2-builder AS builder
 
 RUN xcaddy build \
-    --with git.zed.ink:8443/mingwiki/caddy-auth-oidc
+    --with github.com/mingwiki/caddy-auth-oidc
 
 FROM caddy:2
 
@@ -139,7 +139,7 @@ To test your local changes, use `xcaddy` and replace the module path with your l
 
 ```bash
 xcaddy build \
-    --with git.zed.ink:8443/mingwiki/caddy-auth-oidc=./
+    --with github.com/mingwiki/caddy-auth-oidc=./
 ```
 
 This will produce a `caddy` executable in your current directory with your local plugin modifications compiled in.
