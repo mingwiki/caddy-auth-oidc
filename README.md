@@ -12,6 +12,7 @@ It replaces the need for external auth proxies like `oauth2-proxy` in simple hom
 - **Multi-Domain SSO:** Optionally share authentication state across multiple subdomains.
 - **Token Refresh:** Automatically refreshes the session near expiry.
 - **Header Injection:** Optionally pass user claims upstream.
+- **Issuer URL Override:** Supports discovery via a local backend while validating against the external issuer URL — solves chicken-and-egg when Caddy reverse-proxies its own OIDC provider.
 
 ## Getting Started
 
@@ -22,6 +23,14 @@ The easiest way to build Caddy with this plugin is using `xcaddy`:
 ```bash
 xcaddy build \
     --with github.com/mingwiki/caddy-auth-oidc
+```
+
+### Including Additional Plugins
+
+```bash
+xcaddy build \
+    --with github.com/mingwiki/caddy-auth-oidc \
+    --with github.com/mholt/caddy-webdav
 ```
 
 ### Docker Build Example
@@ -39,9 +48,24 @@ COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
 ## Caddyfile Configuration
 
+### Important: Handler Order
+
+The `auth_oidc` handler must run **before** `reverse_proxy` to intercept unauthenticated requests.
+Add a global `order` directive:
+
+```caddyfile
+{
+    order auth_oidc before reverse_proxy
+}
+```
+
 ### Simple Single-Site
 
 ```caddyfile
+{
+    order auth_oidc before reverse_proxy
+}
+
 auth_oidc {
     provider https://id.example.com
     client_id my_client
@@ -56,9 +80,15 @@ reverse_proxy localhost:8080
 This configuration shares a single OIDC client and session cookie across multiple sites:
 
 ```caddyfile
+{
+    order auth_oidc before reverse_proxy
+    order webdav before file_server
+}
+
 (auth) {
     auth_oidc {
-        provider https://id.example.com
+        provider http://localhost:1411
+        issuer_url https://id.example.com
         client_id my_client
         client_secret my_secret
 
@@ -79,13 +109,19 @@ app2.example.com {
     import auth
     reverse_proxy localhost:8082
 }
+
+# The OIDC provider itself — reverse-proxied by Caddy
+id.example.com {
+    reverse_proxy http://localhost:1411
+}
 ```
 
 ## Configuration Reference
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `provider` | OIDC issuer URL (required) | |
+| `provider` | OIDC discovery URL (required) | |
+| `issuer_url` | Override the issuer URL for token validation; use when provider discovery URL differs from the issuer in metadata | *same as `provider`* |
 | `client_id` | OAuth2 Client ID (required) | |
 | `client_secret` | OAuth2 Client Secret (required) | |
 | `scopes` | OAuth2 scopes | `openid profile email` |
@@ -107,6 +143,27 @@ The plugin automatically handles the following routes on the protected site:
 - `/auth/login`: Initiates the OIDC flow.
 - `/auth/callback`: Handles the OIDC callback.
 - `/auth/logout`: Clears the local session and optionally redirects to the provider's end-session endpoint.
+
+## Chicken-and-Egg: Caddy Proxying Its Own OIDC Provider
+
+When Caddy reverse-proxies the OIDC provider (e.g. `id.example.com` proxies to `localhost:1411`),
+the `auth_oidc` plugin cannot discover the provider via the external URL at startup — Caddy
+isn't listening yet. This creates a startup deadlock.
+
+**Solution:** Use `provider` pointing to the local backend for discovery, and `issuer_url`
+pointing to the external URL for token validation:
+
+```caddyfile
+auth_oidc {
+    provider http://localhost:1411
+    issuer_url https://id.example.com:8443
+    client_id my_client
+    client_secret my_secret
+}
+```
+
+The plugin uses `oidc.InsecureIssuerURLContext` to allow the discovery URL and issuer URL
+to differ.
 
 ## Security Considerations & Hardening
 

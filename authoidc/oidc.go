@@ -18,7 +18,19 @@ func (h *Handler) initOIDC(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	provider, err := oidc.NewProvider(ctx, h.Provider)
+	// Use the external issuer URL for token validation, but discover via
+	// the local backend to avoid the chicken-and-egg problem where Caddy
+	// needs to reach its own reverse-proxied endpoint before starting.
+	discoveryURL := h.Provider
+	issuerURL := h.IssuerURL
+	if issuerURL == "" {
+		issuerURL = h.Provider
+	}
+	if discoveryURL != issuerURL {
+		ctx = oidc.InsecureIssuerURLContext(ctx, issuerURL)
+	}
+
+	provider, err := oidc.NewProvider(ctx, discoveryURL)
 	if err != nil {
 		return fmt.Errorf("auth_oidc: failed to discover provider: %w", err)
 	}

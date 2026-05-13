@@ -96,6 +96,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 				h.HeaderPrefix = d.Val()
+			case "issuer_url":
+				if !d.NextArg() {
+					return d.ArgErr()
+				}
+				h.IssuerURL = d.Val()
 			case "logout_redirect":
 				if !d.NextArg() {
 					return d.ArgErr()

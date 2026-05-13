@@ -21,6 +21,12 @@ func init() {
 type Handler struct {
 	Provider string `json:"provider,omitempty"`
 
+	// IssuerURL overrides the issuer URL for OIDC provider validation.
+	// Use this when the discovery URL differs from the issuer URL in the
+	// provider's metadata (e.g. discovering via localhost but validating
+	// against the external domain).
+	IssuerURL string `json:"issuer_url,omitempty"`
+
 	ClientID     string `json:"client_id,omitempty"`
 	ClientSecret string `json:"client_secret,omitempty"`
 
