@@ -1,4 +1,4 @@
-module github.com/mingwiki/caddy-auth-oidc
+module git.zed.ink:8443/mingwiki/caddy-auth-oidc
 
 go 1.26.3
 
