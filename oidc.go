@@ -1,4 +1,4 @@
-package authoidc
+package caddyauthoidc
 
 import (
 	"context"
